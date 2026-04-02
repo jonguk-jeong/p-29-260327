@@ -35,3 +35,10 @@ logging:
     org.hibernate.orm.jdbc.bind: TRACE
     org.hibernate.orm.jdbc.extract: TRACE
     org.springframework.transaction.interceptor: TRACE
+    com.back: INFO
+
+# 사용자 정의 설정 변수
+custom:
+  jwt:
+    secretPattern: abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890
+    expiration: "#{1000L * 60 * 60 * 24 * 365}"   # yml에서 계산하는 법, 1년

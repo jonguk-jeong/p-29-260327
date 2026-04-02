@@ -25,10 +25,20 @@ public class Member extends BaseEntity {
         this.apiKey = apiKey;
     }
 
+    public Member(int id, String username, String nickname) {
+        this.setId(id);
+        this.username = username;
+        this.nickname = nickname;
+    }
+
     // 멤버의 상태값을 정책에 따라 결정
     // 우리가 글 작성시 보이는 이름을 nickname으로 할지 username으로 할지 여기서 바꾸면 됨
     // 추상화 한 것!
     public String getName() {
         return nickname;
+    }
+
+    public boolean isAdmin() {
+        return "admin".equals(username);
     }
 }

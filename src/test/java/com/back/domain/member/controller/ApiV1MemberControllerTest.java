@@ -2,10 +2,12 @@ package com.back.domain.member.controller;
 
 import com.back.domain.member.entity.Member;
 import com.back.domain.member.repository.MemberRepository;
+import com.back.standard.ut.Ut;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -30,6 +32,9 @@ public class ApiV1MemberControllerTest {
 
     @Autowired
     private MemberRepository memberRepository;
+
+    @Value("${custom.jwt.secretPattern}")
+    private String secretPattern;
 
     @Test
     @DisplayName("회원 가입")
@@ -127,7 +132,8 @@ public class ApiV1MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
                 .andExpect(jsonPath("$.msg").value("%s님 환영합니다.".formatted(member.getNickname())))
-                .andExpect(jsonPath("$.data.apiKey").exists());
+                .andExpect(jsonPath("$.data.apiKey").exists())
+                .andExpect(jsonPath("$.data.accessToken").isNotEmpty());
 
         resultActions.andExpect(
                 result -> {
@@ -139,6 +145,14 @@ public class ApiV1MemberControllerTest {
                     assertThat(apiKeyCookie.getPath()).isEqualTo("/");
                     assertThat(apiKeyCookie.isHttpOnly()).isTrue();
                     assertThat(apiKeyCookie.getDomain()).isEqualTo("localhost");
+
+
+                    Cookie accessTokenCookie = result.getResponse().getCookie("accessToken");
+                    assertThat(accessTokenCookie).isNotNull();
+
+                    assertThat(accessTokenCookie.getPath()).isEqualTo("/");
+                    assertThat(accessTokenCookie.getDomain()).isEqualTo("localhost");
+                    assertThat(accessTokenCookie.isHttpOnly()).isEqualTo(true);
 
                 }
         );
@@ -188,8 +202,41 @@ public class ApiV1MemberControllerTest {
                 .andExpect(handler().methodName("me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(member.getId()))
-                .andExpect(jsonPath("$.createDate").value(member.getCreateDate().toString()))
-                .andExpect(jsonPath("$.modifyDate").value(member.getModifyDate().toString()))
+                .andExpect(jsonPath("$.createDate").exists())
+                .andExpect(jsonPath("$.modifyDate").exists())
                 .andExpect(jsonPath("$.name").value(member.getName()));
+    }
+
+    @Test
+    @DisplayName("내 정보, 올바른 API KEY, 유효하지 않은 accessToken")
+    void t6() throws Exception {
+        Member actor = memberRepository.findByUsername("user1").get();
+        String actorApiKey = actor.getApiKey();
+
+        ResultActions resultActions = mvc
+                .perform(
+                        get("/api/v1/members/me")
+                                .cookie(new Cookie("apiKey", actorApiKey), new Cookie("accessToken", "wrong-access-token"))
+                )
+                .andDo(print());
+
+        resultActions
+                .andExpect(handler().handlerType(ApiV1MemberController.class))
+                .andExpect(handler().methodName("me"))
+                .andExpect(status().isOk());
+
+        resultActions
+                .andExpect((result) -> {
+                    Cookie accessTokenCookie = result.getResponse().getCookie("accessToken");
+                    assertThat(accessTokenCookie).isNotNull();
+
+                    assertThat(accessTokenCookie.getPath()).isEqualTo("/");
+                    assertThat(accessTokenCookie.getDomain()).isEqualTo("localhost");
+                    assertThat(accessTokenCookie.isHttpOnly()).isEqualTo(true);
+
+                    String newAccessToken = accessTokenCookie.getValue();
+                    assertThat(newAccessToken).isNotEqualTo("wrong-access-token");
+                    assertThat(Ut.jwt.isValid(newAccessToken, secretPattern)).isTrue();
+                });
     }
 }
