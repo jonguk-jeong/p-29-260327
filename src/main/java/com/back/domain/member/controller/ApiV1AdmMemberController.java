@@ -2,9 +2,7 @@ package com.back.domain.member.controller;
 
 
 import com.back.domain.member.dto.MemberWithUsernameDto;
-import com.back.domain.member.entity.Member;
 import com.back.domain.member.service.MemberService;
-import com.back.global.exception.ServiceException;
 import com.back.global.rq.Rq;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,13 +21,6 @@ public class ApiV1AdmMemberController {
 
     @GetMapping
     public List<MemberWithUsernameDto> list() {
-
-        Member actor = rq.getActor(); // 인증
-
-        // 관리자 권한 체크
-        if(!actor.isAdmin()){
-            throw new ServiceException("403-1", "권한이 없습니다.");
-        }
 
         return memberService.findAll()
                 .stream()

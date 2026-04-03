@@ -70,7 +70,7 @@ public class Post extends BaseEntity {
     }
 
     public void checkModify(Member actor) {
-        if (!actor.equals(this.getAuthor())) {
+        if (actor.getId() != this.getAuthor().getId()) {
             throw new ServiceException("403-1", "수정 권한이 없습니다.");
         }
     }
